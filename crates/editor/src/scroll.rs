@@ -32,10 +32,18 @@ pub struct WasScrolled(pub(crate) bool);
 
 pub type ScrollOffset = f64;
 pub type ScrollPixelOffset = f64;
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum SplitSide {
+    Left,
+    Right,
+}
+
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ScrollAnchor {
     pub offset: gpui::Point<ScrollOffset>,
     pub anchor: Anchor,
+    pub split_side: Option<SplitSide>,
 }
 
 impl ScrollAnchor {
@@ -43,6 +51,7 @@ impl ScrollAnchor {
         Self {
             offset: gpui::Point::default(),
             anchor: Anchor::min(),
+            split_side: None,
         }
     }
 
@@ -280,6 +289,7 @@ impl ScrollManager {
                 scroll_position.x.max(0.),
                 scroll_top - top_anchor.to_display_point(map).row().as_f64(),
             ),
+            split_side: None,
         };
         let top_row = scroll_top_buffer_point.row;
 
@@ -291,6 +301,7 @@ impl ScrollManager {
             ScrollAnchor {
                 offset: gpui::Point::new(anchor.offset.x, self.anchor.offset.y),
                 anchor: self.anchor.anchor,
+                split_side: anchor.split_side,
             }
         } else {
             anchor
@@ -504,8 +515,12 @@ impl Editor {
             delta.y = 0.0;
         }
         let display_map = self.display_map.update(cx, |map, cx| map.snapshot(cx));
-        let position =
-            self.scroll_manager.read(cx).anchor.scroll_position(&display_map) + delta.map(f64::from);
+        let position = self
+            .scroll_manager
+            .read(cx)
+            .anchor
+            .scroll_position(&display_map)
+            + delta.map(f64::from);
         self.set_scroll_position_taking_display_map(position, true, false, display_map, window, cx);
     }
 
@@ -539,6 +554,7 @@ impl Editor {
             ScrollAnchor {
                 anchor: new_anchor,
                 offset: Default::default(),
+                split_side: None,
             },
             window,
             cx,
@@ -582,7 +598,11 @@ impl Editor {
             .set_previous_scroll_position(None);
 
         let adjusted_position = if self.scroll_manager.read(cx).forbid_vertical_scroll {
-            let current_position = self.scroll_manager.read(cx).anchor.scroll_position(&display_map);
+            let current_position = self
+                .scroll_manager
+                .read(cx)
+                .anchor
+                .scroll_position(&display_map);
             gpui::Point::new(scroll_position.x, current_position.y)
         } else {
             scroll_position
@@ -630,7 +650,10 @@ impl Editor {
 
     pub fn scroll_position(&self, cx: &mut Context<Self>) -> gpui::Point<ScrollOffset> {
         let display_map = self.display_map.update(cx, |map, cx| map.snapshot(cx));
-        self.scroll_manager.read(cx).anchor.scroll_position(&display_map)
+        self.scroll_manager
+            .read(cx)
+            .anchor
+            .scroll_position(&display_map)
     }
 
     pub fn show_scrollbars(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -853,6 +876,7 @@ impl Editor {
             let scroll_anchor = ScrollAnchor {
                 offset: gpui::Point::new(x, y),
                 anchor: top_anchor,
+                split_side: None,
             };
             self.set_scroll_anchor(scroll_anchor, window, cx);
         }

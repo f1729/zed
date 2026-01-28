@@ -444,6 +444,19 @@ impl DisplayMap {
 
     #[instrument(skip_all)]
     pub fn snapshot(&mut self, cx: &mut Context<Self>) -> DisplaySnapshot {
+        let mut snapshot = self.snapshot_internal(cx);
+
+        let companion_display_snapshot = self.companion.as_ref().and_then(|(companion_dm, _)| {
+            companion_dm
+                .update(cx, |dm, cx| Box::new(dm.snapshot_internal(cx)))
+                .ok()
+        });
+        snapshot.companion_display_snapshot = companion_display_snapshot;
+
+        snapshot
+    }
+
+    fn snapshot_internal(&mut self, cx: &mut Context<Self>) -> DisplaySnapshot {
         let (self_wrap_snapshot, self_wrap_edits) = self.sync_through_wrap(cx);
         let companion_wrap_data = self.companion.as_ref().and_then(|(companion_dm, _)| {
             companion_dm
@@ -489,6 +502,7 @@ impl DisplayMap {
             clip_at_line_ends: self.clip_at_line_ends,
             masked: self.masked,
             fold_placeholder: self.fold_placeholder.clone(),
+            companion_display_snapshot: None,
         }
     }
 
@@ -1555,6 +1569,7 @@ pub struct DisplaySnapshot {
     masked: bool,
     diagnostics_max_severity: DiagnosticSeverity,
     pub(crate) fold_placeholder: FoldPlaceholder,
+    pub(crate) companion_display_snapshot: Option<Box<DisplaySnapshot>>,
 }
 
 impl DisplaySnapshot {

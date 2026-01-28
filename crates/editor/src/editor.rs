@@ -35,6 +35,7 @@ pub mod movement;
 mod persistence;
 mod rust_analyzer_ext;
 pub mod scroll;
+pub use scroll::SplitSide;
 mod selections_collection;
 mod split;
 pub mod split_editor_view;
@@ -1132,6 +1133,7 @@ pub struct Editor {
     placeholder_display_map: Option<Entity<DisplayMap>>,
     pub selections: SelectionsCollection,
     pub scroll_manager: Entity<ScrollManager>,
+    pub split_side: Option<SplitSide>,
     /// When inline assist editors are linked, they all render cursors because
     /// typing enters text into each of them, even the ones that aren't focused.
     pub(crate) show_cursor_when_unfocused: bool,
@@ -1387,6 +1389,7 @@ pub struct EditorSnapshot {
     ongoing_scroll: OngoingScroll,
     current_line_highlight: CurrentLineHighlight,
     gutter_hovered: bool,
+    pub split_side: Option<SplitSide>,
 }
 
 #[derive(Default, Debug, Clone, Copy)]
@@ -2341,6 +2344,7 @@ impl Editor {
             placeholder_display_map: None,
             selections,
             scroll_manager: cx.new(|cx| ScrollManager::new(cx)),
+            split_side: None,
             columnar_selection_state: None,
             add_selections_state: None,
             select_next_state: None,
@@ -3107,6 +3111,7 @@ impl Editor {
                 .current_line_highlight
                 .unwrap_or_else(|| EditorSettings::get_global(cx).current_line_highlight),
             gutter_hovered: self.gutter_hovered,
+            split_side: self.split_side,
         }
     }
 
