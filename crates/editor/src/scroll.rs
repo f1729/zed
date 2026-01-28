@@ -220,8 +220,19 @@ impl ScrollManager {
         self.ongoing.axis = axis;
     }
 
-    pub fn scroll_position(&self, snapshot: &DisplaySnapshot) -> gpui::Point<ScrollOffset> {
-        self.anchor.scroll_position(snapshot)
+    pub fn scroll_position(
+        &self,
+        snapshot: &DisplaySnapshot,
+        split_side: Option<SplitSide>,
+    ) -> gpui::Point<ScrollOffset> {
+        let anchor_side = self.anchor.split_side;
+
+        if anchor_side == split_side || anchor_side.is_none() || split_side.is_none() {
+            self.anchor.scroll_position(snapshot)
+        } else {
+            self.anchor
+                .scroll_position(snapshot.companion_display_snapshot.as_ref().unwrap())
+        }
     }
 
     pub fn sticky_header_line_count(&self) -> usize {
@@ -245,6 +256,7 @@ impl ScrollManager {
         scroll_position: gpui::Point<ScrollOffset>,
         map: &DisplaySnapshot,
         scroll_beyond_last_line: ScrollBeyondLastLine,
+        split_side: Option<SplitSide>,
         cx: &mut Context<Self>,
     ) -> Option<(ScrollAnchor, u32)> {
         let scroll_top = scroll_position.y.max(0.);
@@ -289,7 +301,7 @@ impl ScrollManager {
                 scroll_position.x.max(0.),
                 scroll_top - top_anchor.to_display_point(map).row().as_f64(),
             ),
-            split_side: None,
+            split_side,
         };
         let top_row = scroll_top_buffer_point.row;
 
@@ -554,7 +566,7 @@ impl Editor {
             ScrollAnchor {
                 anchor: new_anchor,
                 offset: Default::default(),
-                split_side: None,
+                split_side: self.split_side,
             },
             window,
             cx,
@@ -609,11 +621,13 @@ impl Editor {
         };
 
         let scroll_beyond_last_line = EditorSettings::get_global(cx).scroll_beyond_last_line;
+        let split_side = self.split_side;
         let result = self.scroll_manager.update(cx, |scroll_manager, cx| {
             scroll_manager.set_scroll_position(
                 adjusted_position,
                 &display_map,
                 scroll_beyond_last_line,
+                split_side,
                 cx,
             )
         });
@@ -652,8 +666,7 @@ impl Editor {
         let display_map = self.display_map.update(cx, |map, cx| map.snapshot(cx));
         self.scroll_manager
             .read(cx)
-            .anchor
-            .scroll_position(&display_map)
+            .scroll_position(&display_map, self.split_side)
     }
 
     pub fn show_scrollbars(&mut self, window: &mut Window, cx: &mut Context<Self>) {
@@ -692,6 +705,10 @@ impl Editor {
     ) {
         hide_hover(self, cx);
         let workspace_id = self.workspace.as_ref().and_then(|workspace| workspace.1);
+        let scroll_anchor = ScrollAnchor {
+            split_side: self.split_side,
+            ..scroll_anchor
+        };
         let top_row = scroll_anchor
             .anchor
             .to_point(&self.buffer().read(cx).snapshot(cx))
@@ -733,6 +750,10 @@ impl Editor {
     ) {
         hide_hover(self, cx);
         let workspace_id = self.workspace.as_ref().and_then(|workspace| workspace.1);
+        let scroll_anchor = ScrollAnchor {
+            split_side: self.split_side,
+            ..scroll_anchor
+        };
         let snapshot = &self.buffer().read(cx).snapshot(cx);
         if !scroll_anchor.anchor.is_valid(snapshot) {
             log::warn!("Invalid scroll anchor: {:?}", scroll_anchor);

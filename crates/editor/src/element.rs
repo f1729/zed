@@ -8454,12 +8454,7 @@ fn header_jump_data_inner(
     };
 
     let line_offset_from_top = (block_row_start.0 + height + rows_from_excerpt_start)
-        .saturating_sub(
-            snapshot
-                .scroll_anchor
-                .scroll_position(&snapshot.display_snapshot)
-                .y as u32,
-        );
+        .saturating_sub(snapshot.scroll_position().y as u32);
 
     JumpData::MultiBufferPoint {
         excerpt_id: for_excerpt.id,

@@ -26950,7 +26950,19 @@ impl EditorSnapshot {
     }
 
     pub fn scroll_position(&self) -> gpui::Point<ScrollOffset> {
-        self.scroll_anchor.scroll_position(&self.display_snapshot)
+        let anchor_side = self.scroll_anchor.split_side;
+        let snapshot_side = self.split_side;
+
+        if anchor_side == snapshot_side || anchor_side.is_none() || snapshot_side.is_none() {
+            self.scroll_anchor.scroll_position(&self.display_snapshot)
+        } else {
+            self.scroll_anchor.scroll_position(
+                self.display_snapshot
+                    .companion_display_snapshot
+                    .as_ref()
+                    .unwrap(),
+            )
+        }
     }
 
     pub fn gutter_dimensions(

@@ -448,12 +448,33 @@ impl DisplayMap {
 
         let companion_display_snapshot = self.companion.as_ref().and_then(|(companion_dm, _)| {
             companion_dm
-                .update(cx, |dm, cx| Box::new(dm.snapshot_internal(cx)))
+                .update(cx, |dm, cx| Box::new(dm.snapshot_for_companion(cx)))
                 .ok()
         });
         snapshot.companion_display_snapshot = companion_display_snapshot;
 
         snapshot
+    }
+
+    fn snapshot_for_companion(&mut self, cx: &mut Context<Self>) -> DisplaySnapshot {
+        let (wrap_snapshot, wrap_edits) = self.sync_through_wrap(cx);
+
+        let block_snapshot = self
+            .block_map
+            .read(wrap_snapshot, wrap_edits, None, None)
+            .snapshot;
+
+        DisplaySnapshot {
+            block_snapshot,
+            diagnostics_max_severity: self.diagnostics_max_severity,
+            crease_snapshot: self.crease_map.snapshot(),
+            text_highlights: self.text_highlights.clone(),
+            inlay_highlights: self.inlay_highlights.clone(),
+            clip_at_line_ends: self.clip_at_line_ends,
+            masked: self.masked,
+            fold_placeholder: self.fold_placeholder.clone(),
+            companion_display_snapshot: None,
+        }
     }
 
     fn snapshot_internal(&mut self, cx: &mut Context<Self>) -> DisplaySnapshot {
@@ -2748,7 +2769,7 @@ pub mod tests {
 
         _ = cx.update_window(window, |_, window, cx| {
             let text_layout_details =
-                editor.update(cx, |editor, _cx| editor.text_layout_details(window, cx));
+                editor.update(cx, |editor, cx| editor.text_layout_details(window, cx));
 
             let font_size = px(12.0);
             let wrap_width = Some(px(96.));

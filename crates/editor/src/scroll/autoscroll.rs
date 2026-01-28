@@ -115,7 +115,10 @@ impl Editor {
         let viewport_height = bounds.size.height;
         let visible_lines = ScrollOffset::from(viewport_height / line_height);
         let display_map = self.display_map.update(cx, |map, cx| map.snapshot(cx));
-        let mut scroll_position = self.scroll_manager.read(cx).scroll_position(&display_map);
+        let mut scroll_position = self
+            .scroll_manager
+            .read(cx)
+            .scroll_position(&display_map, self.split_side);
         let original_y = scroll_position.y;
         if let Some(last_bounds) = self.expect_bounds_change.take()
             && scroll_position.y != 0.
@@ -267,12 +270,8 @@ impl Editor {
 
         let anchor_offset = self.scroll_manager.read(cx).anchor.offset;
         self.scroll_manager.update(cx, |scroll_manager, _| {
-            scroll_manager.last_autoscroll = Some((
-                anchor_offset,
-                target_top,
-                target_bottom,
-                strategy,
-            ));
+            scroll_manager.last_autoscroll =
+                Some((anchor_offset, target_top, target_bottom, strategy));
         });
 
         let was_scrolled = WasScrolled(editor_was_scrolled.0 || was_autoscrolled.0);
@@ -297,7 +296,10 @@ impl Editor {
 
         let display_map = self.display_map.update(cx, |map, cx| map.snapshot(cx));
         let selections = self.selections.all::<Point>(&display_map);
-        let mut scroll_position = self.scroll_manager.read(cx).scroll_position(&display_map);
+        let mut scroll_position = self
+            .scroll_manager
+            .read(cx)
+            .scroll_position(&display_map, self.split_side);
 
         let mut target_left;
         let mut target_right: f64;

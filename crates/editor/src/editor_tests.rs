@@ -943,11 +943,17 @@ async fn test_navigation_history(cx: &mut TestAppContext) {
             // Jump to the end of the document and adjust scroll
             editor.move_to_end(&MoveToEnd, window, cx);
             editor.set_scroll_position(gpui::Point::<f64>::new(-2.5, -0.5), window, cx);
-            assert_ne!(editor.scroll_manager.read(cx).anchor(), original_scroll_position);
+            assert_ne!(
+                editor.scroll_manager.read(cx).anchor(),
+                original_scroll_position
+            );
 
             let nav_entry = pop_history(&mut editor, cx).unwrap();
             editor.navigate(nav_entry.data.unwrap(), window, cx);
-            assert_eq!(editor.scroll_manager.read(cx).anchor(), original_scroll_position);
+            assert_eq!(
+                editor.scroll_manager.read(cx).anchor(),
+                original_scroll_position
+            );
 
             // Ensure we don't panic when navigation data contains invalid anchors *and* points.
             let mut invalid_anchor = editor.scroll_manager.read(cx).anchor().anchor;
@@ -960,6 +966,7 @@ async fn test_navigation_history(cx: &mut TestAppContext) {
                     scroll_anchor: ScrollAnchor {
                         anchor: invalid_anchor,
                         offset: Default::default(),
+                        split_side: None,
                     },
                     scroll_top_row: invalid_point.row,
                 }),
@@ -17702,6 +17709,7 @@ async fn test_following(cx: &mut TestAppContext) {
             ScrollAnchor {
                 anchor: top_anchor,
                 offset: gpui::Point::new(0.0, 0.5),
+                split_side: None,
             },
             window,
             cx,
